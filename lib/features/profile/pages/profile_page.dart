@@ -1,0 +1,842 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:talabatfresh/features/vehicles/pages/cars_management_page.dart';
+import 'package:talabatfresh/providers/auth_provider.dart';
+
+import '../../vehicles/data/models/vehicle_model.dart';
+import '../providers/profile_provider.dart';
+
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+
+  static const Color primaryOrange = Color(0xFFF57C00);
+  static const Color darkGrey = Color(0xFF374151);
+  static const Color lightBackground = Color(0xFFF3F4F6);
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<ProfileProvider>().loadProfile();
+    });
+  }
+
+  Future<void> _logout() async {
+    await context.read<AuthProvider>().logout();
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/',
+          (_) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ProfileProvider>();
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final textColor = isDark ? Colors.white : ProfilePage.darkGrey;
+    final subtleTextColor =
+    isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF6B7280);
+
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: ProfilePage.lightBackground,
+        body: RefreshIndicator(
+          onRefresh: provider.refreshProfile,
+          child: provider.isLoading && provider.user == null
+              ? const Center(child: CircularProgressIndicator())
+              : provider.errorMessage != null && provider.user == null
+              ? _ErrorView(
+            message: provider.errorMessage!,
+            onRetry: provider.loadProfile,
+          )
+              : SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Header(
+                  textColor: textColor,
+                  isVerified: provider.user?.isActive ?? false,
+                ),
+
+                const SizedBox(height: 16),
+
+                _ProfileHeaderCard(
+                  name: provider.user?.name ?? 'User',
+                  email: provider.user?.email ?? '',
+                  phone: provider.user?.phone ?? '',
+                  isDark: isDark,
+                  textColor: textColor,
+                  subtleTextColor: subtleTextColor,
+                ),
+
+                const SizedBox(height: 20),
+
+                _SectionTitle(
+                  title: 'Your cars',
+                  actionText: 'Manage',
+                  onActionTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CarsManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 10),
+
+                if (provider.vehicles.isNotEmpty)
+                  SizedBox(
+                    height: 127,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: provider.vehicles.length,
+                      separatorBuilder: (_, __) =>
+                      const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final vehicle = provider.vehicles[index];
+
+                        return _CarCard(
+                          vehicle: vehicle,
+                          isDark: isDark,
+                        );
+                      },
+                    ),
+                  )
+                else
+                  _EmptyCard(
+                    text: 'No cars added yet',
+                    isDark: isDark,
+                  ),
+
+                const SizedBox(height: 24),
+
+                const _SectionTitle(
+                  title: 'Payment methods',
+                  actionText: 'Edit',
+                ),
+
+                const SizedBox(height: 8),
+
+                _CardBox(
+                  isDark: isDark,
+                  child: const Column(
+                    children: [
+                      _SettingTile(
+                        icon: Icons.credit_card_rounded,
+                        iconColor: ProfilePage.primaryOrange,
+                        title: 'Visa ending in 2148',
+                        subtitle: 'Default for parts & repairs',
+                        trailingText: 'Primary',
+                      ),
+                      Divider(height: 1),
+                      _SettingTile(
+                        icon: Icons.account_balance_wallet_rounded,
+                        iconColor: Color(0xFF10B981),
+                        title: 'Apple Pay',
+                        subtitle: 'Enabled on this device',
+                        trailingIcon: Icons.chevron_right_rounded,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                const _SectionTitle(
+                  title: 'Preferences',
+                  actionText: 'Edit',
+                ),
+
+                const SizedBox(height: 8),
+
+                _CardBox(
+                  isDark: isDark,
+                  child: Column(
+                    children: [
+                      _SwitchTile(
+                        icon: Icons.notifications_active_rounded,
+                        iconColor: const Color(0xFFF59E0B),
+                        title: 'Push notifications',
+                        subtitle: 'Job status, arrivals and offers',
+                        value: true,
+                        onChanged: null,
+                      ),
+                      const Divider(height: 1),
+                      _SwitchTile(
+                        icon: Icons.email_rounded,
+                        iconColor: ProfilePage.primaryOrange,
+                        title: 'Email updates',
+                        subtitle: 'Receipts and account activity',
+                        value: true,
+                        onChanged: null,
+                      ),
+                      const Divider(height: 1),
+                      _SwitchTile(
+                        icon: Icons.shield_rounded,
+                        iconColor: const Color(0xFF10B981),
+                        title: 'Share location automatically',
+                        subtitle: 'Faster roadside matching',
+                        value: true,
+                        onChanged: null,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                const _SectionTitle(
+                  title: 'Help & legal',
+                ),
+
+                const SizedBox(height: 8),
+
+                _CardBox(
+                  isDark: isDark,
+                  child: const Column(
+                    children: [
+                      _SettingTile(
+                        icon: Icons.help_center_rounded,
+                        iconColor: ProfilePage.primaryOrange,
+                        title: 'Help center',
+                        subtitle: 'FAQs and support',
+                        trailingIcon: Icons.chevron_right_rounded,
+                      ),
+                      Divider(height: 1),
+                      _SettingTile(
+                        icon: Icons.article_rounded,
+                        iconColor: Color(0xFF6366F1),
+                        title: 'Terms of service',
+                        trailingIcon: Icons.chevron_right_rounded,
+                      ),
+                      Divider(height: 1),
+                      _SettingTile(
+                        icon: Icons.privacy_tip_rounded,
+                        iconColor: Color(0xFF10B981),
+                        title: 'Privacy policy',
+                        trailingIcon: Icons.chevron_right_rounded,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(
+                      Icons.logout_rounded,
+                      size: 18,
+                      color: Color(0xFFDC2626),
+                    ),
+                    label: const Text(
+                      'Log out',
+                      style: TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Center(
+                  child: Text(
+                    'App version 1.0.0',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: subtleTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  final Color textColor;
+  final bool isVerified;
+
+  const _Header({
+    required this.textColor,
+    required this.isVerified,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Profile',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.white,
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.10) : Colors.grey.shade300,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isVerified ? Icons.verified_rounded : Icons.info_outline,
+                size: 14,
+                color: ProfilePage.primaryOrange,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isVerified ? 'Verified' : 'Pending',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileHeaderCard extends StatelessWidget {
+  final String name;
+  final String email;
+  final String phone;
+  final bool isDark;
+  final Color textColor;
+  final Color subtleTextColor;
+
+  const _ProfileHeaderCard({
+    required this.name,
+    required this.email,
+    required this.phone,
+    required this.isDark,
+    required this.textColor,
+    required this.subtleTextColor,
+  });
+
+  String get initials {
+    final parts = name.trim().split(' ').where((e) => e.isNotEmpty).toList();
+
+    if (parts.isEmpty) return 'U';
+
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+            const Color(0xFF111827),
+            const Color(0xFF020617),
+          ]
+              : [
+            const Color(0xFFFFF3E0),
+            const Color(0xFFFFE0B2),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.95),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+                if (email.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: subtleTextColor,
+                    ),
+                  ),
+                ],
+                if (phone.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    phone,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: subtleTextColor,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              color: Colors.white.withOpacity(0.95),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.edit_rounded,
+                  size: 14,
+                  color: ProfilePage.primaryOrange,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Edit',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: ProfilePage.primaryOrange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CarCard extends StatelessWidget {
+  final VehicleModel vehicle;
+  final bool isDark;
+
+  const _CarCard({
+    required this.vehicle,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = vehicle.isPrimary;
+
+    final bg = primary
+        ? ProfilePage.primaryOrange
+        : (isDark ? const Color(0xFF020617) : Colors.white);
+
+    final textColor =
+    primary ? Colors.white : (isDark ? Colors.white : const Color(0xFF111827));
+
+    final subtle = primary
+        ? Colors.white.withOpacity(0.9)
+        : (isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF6B7280));
+
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: bg,
+        border: Border.all(
+          color: primary
+              ? ProfilePage.primaryOrange
+              : (isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE5E7EB)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.directions_car_filled_rounded,
+            size: 26,
+            color: primary ? Colors.white : ProfilePage.primaryOrange,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            vehicle.displayName.isEmpty ? 'Vehicle' : vehicle.displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            vehicle.details.isEmpty ? 'No details' : vehicle.details,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: subtle,
+            ),
+          ),
+          const Spacer(),
+          if (primary)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: Colors.white.withOpacity(0.15),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.check_rounded,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Default car',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String? actionText;
+  final VoidCallback? onActionTap;
+
+  const _SectionTitle({
+    required this.title,
+    this.actionText,
+    this.onActionTap
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF111827);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        if (actionText != null)
+          InkWell(
+            onTap: onActionTap,
+            child: Text(
+              actionText!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: ProfilePage.primaryOrange,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _CardBox extends StatelessWidget {
+  final bool isDark;
+  final Widget child;
+
+  const _CardBox({
+    required this.isDark,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isDark ? const Color(0xFF020617) : Colors.white,
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE5E7EB),
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SettingTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final String? trailingText;
+  final IconData? trailingIcon;
+
+  const _SettingTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    this.trailingText,
+    this.trailingIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF111827);
+    final subtitleColor =
+    isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF6B7280);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: iconColor.withOpacity(0.12),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: iconColor,
+        ),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: titleColor,
+        ),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+        subtitle!,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: subtitleColor,
+        ),
+      )
+          : null,
+      trailing: trailingText != null
+          ? Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: ProfilePage.primaryOrange.withOpacity(0.12),
+        ),
+        child: Text(
+          trailingText!,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: ProfilePage.primaryOrange,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      )
+          : trailingIcon != null
+          ? Icon(
+        trailingIcon,
+        size: 18,
+        color: isDark
+            ? Colors.white.withOpacity(0.7)
+            : const Color(0xFF9CA3AF),
+      )
+          : null,
+      onTap: () {},
+    );
+  }
+}
+
+class _SwitchTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  const _SwitchTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF111827);
+    final subtitleColor =
+    isDark ? Colors.white.withOpacity(0.7) : const Color(0xFF6B7280);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: iconColor.withOpacity(0.12),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: iconColor,
+        ),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: titleColor,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: subtitleColor,
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: Colors.white,
+        activeTrackColor: ProfilePage.primaryOrange,
+      ),
+      onTap: () {},
+    );
+  }
+}
+
+class _EmptyCard extends StatelessWidget {
+  final String text;
+  final bool isDark;
+
+  const _EmptyCard({
+    required this.text,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF020617) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(text),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _ErrorView({
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
