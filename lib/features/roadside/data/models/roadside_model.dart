@@ -77,6 +77,17 @@ class RoadsideRequestModel {
   final RoadsideServiceModel? serviceType;
   final VehicleModel? vehicle;
 
+  final String? locationAddress;
+
+  final String? destinationAddress;
+  final double? destinationLatitude;
+  final double? destinationLongitude;
+
+  final double? estimatedPrice;
+  final double? finalPrice;
+  final int? etaMinutes;
+  final double? distanceMiles;
+
   const RoadsideRequestModel({
     this.id,
     this.requestNumber,
@@ -90,6 +101,15 @@ class RoadsideRequestModel {
     this.paymentStatus = '',
     this.serviceType,
     this.vehicle,
+
+    this.locationAddress,
+    this.destinationAddress,
+    this.destinationLatitude,
+    this.destinationLongitude,
+    this.estimatedPrice,
+    this.finalPrice,
+    this.etaMinutes,
+    this.distanceMiles,
   });
 
   factory RoadsideRequestModel.fromJson(Map<String, dynamic> json) {
@@ -110,6 +130,44 @@ class RoadsideRequestModel {
       vehicle: json['vehicle'] is Map<String, dynamic>
           ? VehicleModel.fromJson(json['vehicle'])
           : null,
+
+      locationAddress:
+      json['location_address']?.toString(),
+
+      destinationAddress:
+      json['destination_address']?.toString(),
+
+      destinationLatitude:
+      _toDouble(
+        json['destination_latitude'],
+      ),
+
+      destinationLongitude:
+      _toDouble(
+        json['destination_longitude'],
+      ),
+
+      estimatedPrice:
+      _toDouble(
+        json['estimated_price'],
+      ),
+
+      finalPrice:
+      _toDouble(
+        json['final_price'],
+      ),
+
+      etaMinutes:
+      _toInt(
+        json['eta_minutes'],
+      ),
+
+      distanceMiles:
+      _toDouble(
+        json['distance_miles'],
+      ),
+
+
     );
   }
 

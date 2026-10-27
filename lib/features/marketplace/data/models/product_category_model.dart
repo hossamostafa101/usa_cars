@@ -5,6 +5,7 @@ class ProductCategoryModel {
   final String? slug;
   final String? categoryType;
   final int productsCount;
+  final int childrenCount;
   final List<ProductCategoryModel> children;
 
   const ProductCategoryModel({
@@ -14,8 +15,13 @@ class ProductCategoryModel {
     this.slug,
     this.categoryType,
     this.productsCount = 0,
+    this.childrenCount = 0,
     this.children = const [],
   });
+
+  bool get isLeaf => childrenCount == 0;
+
+  bool get hasChildren => childrenCount > 0;
 
   factory ProductCategoryModel.fromJson(Map<String, dynamic> json) {
     return ProductCategoryModel(
@@ -25,6 +31,7 @@ class ProductCategoryModel {
       slug: json['slug']?.toString(),
       categoryType: json['category_type']?.toString(),
       productsCount: _toInt(json['products_count']) ?? 0,
+      childrenCount: _toInt(json['children_count']) ?? 0,
       children: json['children'] is List
           ? (json['children'] as List)
           .whereType<Map<String, dynamic>>()

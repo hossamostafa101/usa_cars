@@ -1,8 +1,12 @@
 class VehicleModel {
   final int? id;
+  final int? makeId;
+  final int? modelId;
   final int? year;
   final String? trimName;
   final String? engine;
+  final String? fuelType;
+  final String? transmission;
   final String? color;
   final String? vin;
   final String? plateNumber;
@@ -15,9 +19,13 @@ class VehicleModel {
 
   const VehicleModel({
     this.id,
+    this.makeId,
+    this.modelId,
     this.year,
     this.trimName,
     this.engine,
+    this.fuelType,
+    this.transmission,
     this.color,
     this.vin,
     this.plateNumber,
@@ -30,11 +38,19 @@ class VehicleModel {
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
+    final make = json['make'];
+    final model = json['model'];
     return VehicleModel(
       id: _toInt(json['id']),
+      makeId: _toInt(json['make_id']) ??
+          (make is Map ? _toInt(make['id']) : null),
+      modelId: _toInt(json['model_id']) ??
+          (model is Map ? _toInt(model['id']) : null),
       year: _toInt(json['year']),
       trimName: json['trim_name']?.toString(),
       engine: json['engine']?.toString(),
+      fuelType: json['fuel_type']?.toString(),
+      transmission: json['transmission']?.toString(),
       color: json['color']?.toString(),
       vin: json['vin']?.toString(),
       plateNumber: json['plate_number']?.toString(),
@@ -44,8 +60,8 @@ class VehicleModel {
           json['is_primary'] == 1 ||
           json['is_primary'] == '1',
       status: json['status']?.toString(),
-      makeName: json['make'] is Map ? json['make']['name']?.toString() : null,
-      modelName: json['model'] is Map ? json['model']['name']?.toString() : null,
+      makeName: make is Map ? make['name']?.toString() : null,
+      modelName: model is Map ? model['name']?.toString() : null,
     );
   }
 
@@ -56,7 +72,6 @@ class VehicleModel {
       if (modelName != null) modelName,
       if (trimName != null) trimName,
     ];
-
     return parts.whereType<String>().where((e) => e.isNotEmpty).join(' ');
   }
 
@@ -65,7 +80,6 @@ class VehicleModel {
       if (mileage != null) '$mileage miles',
       if (plateNumber != null) 'Plate: $plateNumber',
     ];
-
     return parts.join(' • ');
   }
 

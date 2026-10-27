@@ -58,6 +58,7 @@ dependencies:
   youtube_player_flutter: ^9.0.1
 
   syncfusion_flutter_pdfviewer: ^28.1.33
+  speech_to_text: 7.4.0
 
 dev_dependencies:
   flutter_test:

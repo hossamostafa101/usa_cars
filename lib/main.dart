@@ -13,6 +13,7 @@ import 'package:talabatfresh/features/home/providers/home_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/cart_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/marketplace_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/place_order_provider.dart';
+import 'package:talabatfresh/features/part_requests/providers/part_request_provider.dart';
 import 'package:talabatfresh/features/profile/providers/profile_provider.dart';
 import 'package:talabatfresh/features/repair/providers/repair_provider.dart';
 import 'package:talabatfresh/features/roadside/providers/roadside_provider.dart';
@@ -56,15 +57,7 @@ void main() async {
   AndroidInitializationSettings('@drawable/wheely_icon_notify_trans');
   const InitializationSettings initSettings =
   InitializationSettings(android: androidSettings);
-  /*await flutterLocalNotificationsPlugin.initialize(
-    initSettings,
-    onDidReceiveNotificationResponse: (response) {
-      final payload = response.payload;
-      if (payload != null) {
-        // Handle tap action
-      }
-    },
-  );*/
+
   runApp(const App());
 }
 
@@ -111,6 +104,9 @@ class _AppState extends State<App> {
         ChangeNotifierProvider(create: (_) => RoadsideProvider()),
         ChangeNotifierProvider(create: (_) => RepairProvider()),
         ChangeNotifierProvider(create: (_) => PlaceOrderProvider()),
+        ChangeNotifierProvider(
+          create: (_) => PartRequestProvider(),
+        ),
       ],
       child: GetMaterialApp(
         defaultTransition: Transition.rightToLeft,

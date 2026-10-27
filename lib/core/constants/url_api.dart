@@ -3,7 +3,7 @@ class UrlApi {
   static const String baseDomain = 'https://ordoraa.com/usacars';
   static const String baseUrl = '$baseDomain/api';
 
-  static String assetUrl(String? path) {
+  static String assetUrlX(String? path) {
     if (path == null || path.isEmpty) return '';
 
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -15,6 +15,28 @@ class UrlApi {
     }
 
     return '$baseDomain/$path';
+  }
+  static String assetUrl(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return '';
+    }
+
+    var cleanPath = path.trim().replaceAll('\\', '/');
+
+    if (cleanPath.startsWith('http://') ||
+        cleanPath.startsWith('https://')) {
+      return cleanPath;
+    }
+
+    while (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+
+    if (cleanPath.startsWith('storage/')) {
+      return '$baseDomain/$cleanPath';
+    }
+
+    return '$baseDomain/storage/$cleanPath';
   }
   // Auth
   static const String registerCustomer = '$baseUrl/auth/register/customer';
@@ -28,6 +50,9 @@ class UrlApi {
   static const String profile = '$baseUrl/profile';
   static const String updateProfile = '$baseUrl/profile/update';
   static const String changePassword = '$baseUrl/profile/change-password';
+
+  static const String updateCustomerProfile =
+      '$baseUrl/profile/customer/update';
 
   // Vehicle Catalog
   static const String vehicleMakes = '$baseUrl/vehicle-catalog/makes';
@@ -102,6 +127,22 @@ class UrlApi {
   // Customer Home
   static const String customerHome = '$baseUrl/customer/home';
 
+
+
+
+// Customer Notifications
+  static const String customerNotifications =
+      '$baseUrl/customer/notifications';
+
+  static String markCustomerNotificationRead(
+      int notificationId,
+      ) {
+    return '$baseUrl/customer/notifications/'
+        '$notificationId/read';
+  }
+
+  static const String customerNotificationsReadAll =
+      '$baseUrl/customer/notifications/read-all';
 
 
 
@@ -189,4 +230,50 @@ class UrlApi {
   static String cancelRepairRequest(int requestId) {
     return '$baseUrl/repair-requests/$requestId/cancel';
   }*/
+
+
+
+
+
+
+
+
+
+
+
+
+// Part Requests
+  static const String partRequests =
+      '$baseUrl/part-requests';
+
+  static String partRequestDetails(int requestId) {
+    return '$baseUrl/part-requests/$requestId';
+  }
+
+  static String cancelPartRequest(int requestId) {
+    return '$baseUrl/part-requests/$requestId/cancel';
+  }
+
+  static String acceptPartQuotation(
+      int requestId,
+      int quotationId,
+      ) {
+    return '$baseUrl/part-requests/'
+        '$requestId/quotations/'
+        '$quotationId/accept';
+  }
+
+
+
+
+
+
+
+
+
+
+
+  static const String vehicleYears = '$baseUrl/vehicle-catalog/years';
+
+  
 }

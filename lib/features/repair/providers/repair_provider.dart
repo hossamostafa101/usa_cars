@@ -62,6 +62,9 @@ class RepairProvider extends ChangeNotifier {
     int radius = 10,
     String? search,
   }) async {
+    if (search != null) {
+      searchText = search.trim();
+    }
     try {
       isLoading = true;
       errorMessage = null;
@@ -171,5 +174,20 @@ class RepairProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+
+
+
+
+
+
+
+
+
+
+  void clearSelectedService() {
+    selectedService = null;
+    notifyListeners();
   }
 }

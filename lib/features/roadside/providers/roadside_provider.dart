@@ -92,45 +92,93 @@ class RoadsideProvider extends ChangeNotifier {
     required int vehicleId,
     required double latitude,
     required double longitude,
+
+    String? locationAddress,
+
+    String? destinationAddress,
+    double? destinationLatitude,
+    double? destinationLongitude,
+
     String? notes,
     int? serviceId,
     int? branchId,
   }) async {
     try {
-      final selectedServiceId = serviceId ?? selectedService?.id;
+      final selectedServiceId =
+          serviceId ??
+              selectedService?.id;
 
-      if (selectedServiceId == null) {
-        errorMessage = 'Please select a roadside service.';
+      if (selectedServiceId ==
+          null) {
+        errorMessage =
+        'Please select a roadside service.';
+
         notifyListeners();
+
         return false;
       }
 
       isSubmitting = true;
       errorMessage = null;
+
       notifyListeners();
 
-      final request = await _apiService.createRequest(
-        roadsideServiceId: selectedServiceId,
-        vehicleId: vehicleId,
-        branchId: branchId,
-        latitude: latitude,
-        longitude: longitude,
-        notes: notes,
+      final request =
+      await _apiService
+          .createRequest(
+        roadsideServiceId:
+        selectedServiceId,
+
+        vehicleId:
+        vehicleId,
+
+        branchId:
+        branchId,
+
+        latitude:
+        latitude,
+
+        longitude:
+        longitude,
+
+        locationAddress:
+        locationAddress,
+
+        destinationAddress:
+        destinationAddress,
+
+        destinationLatitude:
+        destinationLatitude,
+
+        destinationLongitude:
+        destinationLongitude,
+
+        notes:
+        notes,
       );
 
-      activeRequest = request;
+      activeRequest =
+          request;
+
       await loadHome();
 
       isSubmitting = false;
+
       notifyListeners();
+
       return true;
     } catch (e) {
       isSubmitting = false;
-      errorMessage = e.toString();
+
+      errorMessage =
+          e.toString();
+
       notifyListeners();
+
       return false;
     }
   }
+
   Future<bool> createRequestX({
     required int vehicleId,
     required double latitude,

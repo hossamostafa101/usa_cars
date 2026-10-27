@@ -60,23 +60,70 @@ class RoadsideApiService {
   }
 
 
-  Future<RoadsideRequestModel> createRequest({
+  Future<RoadsideRequestModel>
+  createRequest({
     required int roadsideServiceId,
     required int vehicleId,
+
     int? branchId,
+
     required double latitude,
     required double longitude,
+
+    String? locationAddress,
+
+    String? destinationAddress,
+    double? destinationLatitude,
+    double? destinationLongitude,
+
     String? notes,
   }) async {
-    final response = await _apiClient.post(
+    final response =
+    await _apiClient.post(
       UrlApi.roadsideRequests,
       data: {
-        'roadside_service_id': roadsideServiceId,
-        'vehicle_id': vehicleId,
-        if (branchId != null) 'branch_id': branchId,
-        'latitude': latitude,
-        'longitude': longitude,
-        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+        'roadside_service_id':
+        roadsideServiceId,
+
+        'vehicle_id':
+        vehicleId,
+
+        if (branchId != null)
+          'branch_id':
+          branchId,
+
+        'latitude':
+        latitude,
+
+        'longitude':
+        longitude,
+
+        if (locationAddress != null &&
+            locationAddress
+                .trim()
+                .isNotEmpty)
+          'location_address':
+          locationAddress.trim(),
+
+        if (destinationAddress != null &&
+            destinationAddress
+                .trim()
+                .isNotEmpty)
+          'destination_address':
+          destinationAddress.trim(),
+
+        if (destinationLatitude != null)
+          'destination_latitude':
+          destinationLatitude,
+
+        if (destinationLongitude != null)
+          'destination_longitude':
+          destinationLongitude,
+
+        if (notes != null &&
+            notes.trim().isNotEmpty)
+          'notes':
+          notes.trim(),
       },
     );
 

@@ -54,7 +54,7 @@ class _RootShellState extends State<RootShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // لخلفية شفافة جميلة تحت البار
+      extendBody: false, // لخلفية شفافة جميلة تحت البار
       bottomNavigationBar: BuildBottomNavBar(
         currIndex: _currentIndex,
         onTap: (i) {

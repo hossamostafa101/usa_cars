@@ -81,4 +81,105 @@ class OrderApiService {
         ? body['message']?.toString() ?? 'Mark paid failed.'
         : 'Mark paid failed.';
   }
+
+
+
+
+
+
+
+
+
+  Future<List<OrderModel>> getOrders({
+    String? orderStatus,
+    String? paymentStatus,
+    int perPage = 50,
+  }) async {
+    final Response response = await _apiClient.get(
+      UrlApi.orders,
+      queryParameters: {
+        if (orderStatus != null &&
+            orderStatus.trim().isNotEmpty)
+          'order_status': orderStatus.trim(),
+        if (paymentStatus != null &&
+            paymentStatus.trim().isNotEmpty)
+          'payment_status': paymentStatus.trim(),
+        'per_page': perPage,
+      },
+    );
+
+    final body = response.data;
+
+    if (body is Map<String, dynamic> &&
+        body['status'] == true) {
+      final data = body['data'];
+
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(OrderModel.fromJson)
+            .toList();
+      }
+
+      if (data is Map<String, dynamic> &&
+          data['data'] is List) {
+        return (data['data'] as List)
+            .whereType<Map<String, dynamic>>()
+            .map(OrderModel.fromJson)
+            .toList();
+      }
+    }
+
+    throw body is Map<String, dynamic>
+        ? body['message']?.toString() ??
+        'Failed to load orders.'
+        : 'Failed to load orders.';
+  }
+
+  Future<OrderModel> getOrderDetails(
+      int orderId,
+      ) async {
+    final Response response = await _apiClient.get(
+      UrlApi.orderDetails(orderId),
+    );
+
+    final body = response.data;
+
+    if (body is Map<String, dynamic> &&
+        body['status'] == true &&
+        body['data'] is Map<String, dynamic>) {
+      return OrderModel.fromJson(
+        body['data'],
+      );
+    }
+
+    throw body is Map<String, dynamic>
+        ? body['message']?.toString() ??
+        'Failed to load order.'
+        : 'Failed to load order.';
+  }
+
+  Future<OrderModel> cancelOrder(
+      int orderId,
+      ) async {
+    final Response response = await _apiClient.post(
+      UrlApi.cancelOrder(orderId),
+      data: {},
+    );
+
+    final body = response.data;
+
+    if (body is Map<String, dynamic> &&
+        body['status'] == true &&
+        body['data'] is Map<String, dynamic>) {
+      return OrderModel.fromJson(
+        body['data'],
+      );
+    }
+
+    throw body is Map<String, dynamic>
+        ? body['message']?.toString() ??
+        'Failed to cancel order.'
+        : 'Failed to cancel order.';
+  }
 }

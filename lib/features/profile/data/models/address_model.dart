@@ -11,6 +11,9 @@ class AddressModel {
   final String? country;
   final bool isDefault;
 
+  final double? latitude;
+  final double? longitude;
+
   const AddressModel({
     this.id,
     this.label,
@@ -23,6 +26,10 @@ class AddressModel {
     this.postalCode,
     this.country,
     this.isDefault = false,
+
+    this.latitude,
+    this.longitude,
+
   });
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +49,13 @@ class AddressModel {
       isDefault: json['is_default'] == true ||
           json['is_default'] == 1 ||
           json['is_default'] == '1',
+
+
+      latitude:
+      _toDouble(json['latitude']),
+      longitude:
+      _toDouble(json['longitude']),
+
     );
   }
 
@@ -66,5 +80,18 @@ class AddressModel {
     if (value == null) return null;
     if (value is int) return value;
     return int.tryParse(value.toString());
+  }
+  static double? _toDouble(
+      dynamic value,
+      ) {
+    if (value == null) return null;
+
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(
+      value.toString(),
+    );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../profile/data/models/address_model.dart';
+import '../../profile/pages/addresses_page.dart';
 import '../providers/cart_provider.dart';
 import '../providers/place_order_provider.dart';
 
@@ -37,7 +38,58 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
     super.dispose();
   }
 
+  Future<void> _manageAddresses() async {
+    final provider = context.read<PlaceOrderProvider>();
+    final shippingId = provider.selectedShippingAddress?.id;
+    final billingId = provider.selectedBillingAddress?.id;
+
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AddressesPage(
+          returnOnSave: provider.addresses.isEmpty,
+        ),
+      ),
+    );
+    if (!mounted) return;
+
+    // Refresh the server data after returning from add/edit/delete.
+    await provider.loadCheckoutData();
+    if (!mounted) return;
+
+    // Preserve previous selections where the addresses still exist.
+    for (final address in provider.addresses) {
+      if (shippingId != null && address.id == shippingId) {
+        provider.selectShippingAddress(address);
+      }
+      if (billingId != null && address.id == billingId) {
+        provider.selectBillingAddress(address);
+      }
+    }
+
+    // For the first address, or when the old one was deleted,
+    // choose the default saved address (or the first available one).
+    if (provider.selectedShippingAddress == null &&
+        provider.addresses.isNotEmpty) {
+      final defaults = provider.addresses.where((a) => a.isDefault);
+      provider.selectShippingAddress(
+        defaults.isNotEmpty ? defaults.first : provider.addresses.first,
+      );
+    }
+
+    if (created == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Address saved. Review the shipping address before placing your order.')),
+      );
+    }
+  }
+
   Future<void> _placeOrder() async {
+    if (context.read<PlaceOrderProvider>().selectedShippingAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a shipping address to continue.')),
+      );
+      return;
+    }
     final cartProvider = context.read<CartProvider>();
     final placeOrderProvider = context.read<PlaceOrderProvider>();
 
@@ -100,6 +152,7 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
         child: _CheckoutBottomBar(
           total: total,
           isLoading: checkout.isPlacingOrder,
+          canPlaceOrder: checkout.selectedShippingAddress != null,
           onPlaceOrder: _placeOrder,
         ),
       ),
@@ -114,16 +167,25 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
           children: [
             _SectionTitle(
               title: 'Shipping address',
-              actionText: checkout.addresses.isEmpty ? null : 'Change',
-              onTap: () => _openAddressSelector(
-                isShipping: true,
-              ),
+              actionText: checkout.addresses.isEmpty ? 'Add address' : 'Change',
+              onTap: checkout.addresses.isEmpty
+                  ? _manageAddresses
+                  : () => _openAddressSelector(isShipping: true),
             ),
             const SizedBox(height: 10),
             checkout.selectedShippingAddress == null
-                ? const _MissingAddressCard()
+                ? _MissingAddressCard(onAdd: _manageAddresses)
                 : _AddressCard(
               address: checkout.selectedShippingAddress!,
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _manageAddresses,
+                icon: const Icon(Icons.edit_location_alt_outlined),
+                label: const Text('Add or manage addresses'),
+              ),
             ),
 
             const SizedBox(height: 22),
@@ -189,14 +251,14 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
     );
   }
 
-  void _openAddressSelector({
+  Future<void> _openAddressSelector({
     required bool isShipping,
-  }) {
+  }) async {
     final provider = context.read<PlaceOrderProvider>();
 
     if (provider.addresses.isEmpty) return;
 
-    showModalBottomSheet(
+    final manage = await showModalBottomSheet<bool>(
       context: context,
       builder: (_) {
         return _AddressSelectorSheet(
@@ -205,6 +267,7 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
           selectedAddress: isShipping
               ? provider.selectedShippingAddress
               : provider.selectedBillingAddress,
+          onManage: () => Navigator.pop(context, true),
           onSelected: (address) {
             if (isShipping) {
               provider.selectShippingAddress(address);
@@ -212,11 +275,15 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
               provider.selectBillingAddress(address);
             }
 
-            Navigator.pop(context);
+            Navigator.pop(context, false);
           },
         );
       },
     );
+
+    if (manage == true && mounted) {
+      await _manageAddresses();
+    }
   }
 }
 
@@ -316,24 +383,48 @@ class _AddressCard extends StatelessWidget {
 }
 
 class _MissingAddressCard extends StatelessWidget {
-  const _MissingAddressCard();
+  final VoidCallback onAdd;
+
+  const _MissingAddressCard({required this.onAdd});
 
   @override
   Widget build(BuildContext context) {
-    return const _WhiteCard(
-      child: Row(
+    return _WhiteCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: Color(0xFFF59E0B),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'No address found. Please add an address before checkout.',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.location_off_outlined,
+                  color: PlaceOrderPage.primaryOrange),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Where should we deliver your order?',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        )),
+                    SizedBox(height: 5),
+                    Text('Add a shipping address before placing your order.'),
+                  ],
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: onAdd,
+              style: FilledButton.styleFrom(
+                  backgroundColor: PlaceOrderPage.primaryOrange),
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text('Add shipping address'),
             ),
           ),
         ],
@@ -522,11 +613,13 @@ class _SummaryRow extends StatelessWidget {
 class _CheckoutBottomBar extends StatelessWidget {
   final double total;
   final bool isLoading;
+  final bool canPlaceOrder;
   final VoidCallback onPlaceOrder;
 
   const _CheckoutBottomBar({
     required this.total,
     required this.isLoading,
+    required this.canPlaceOrder,
     required this.onPlaceOrder,
   });
 
@@ -565,7 +658,7 @@ class _CheckoutBottomBar extends StatelessWidget {
           SizedBox(
             height: 52,
             child: ElevatedButton(
-              onPressed: isLoading ? null : onPlaceOrder,
+              onPressed: isLoading || !canPlaceOrder ? null : onPlaceOrder,
               style: ElevatedButton.styleFrom(
                 backgroundColor: PlaceOrderPage.primaryOrange,
                 foregroundColor: Colors.white,
@@ -594,12 +687,14 @@ class _AddressSelectorSheet extends StatelessWidget {
   final List<AddressModel> addresses;
   final AddressModel? selectedAddress;
   final void Function(AddressModel address) onSelected;
+  final VoidCallback onManage;
 
   const _AddressSelectorSheet({
     required this.title,
     required this.addresses,
     required this.selectedAddress,
     required this.onSelected,
+    required this.onManage,
   });
 
   @override
@@ -607,60 +702,71 @@ class _AddressSelectorSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 14),
-            ...addresses.map((address) {
-              final selected = selectedAddress?.id == address.id;
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: InkWell(
-                  onTap: () => onSelected(address),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected
-                            ? PlaceOrderPage.primaryOrange
-                            : const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          selected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_off,
-                          color: selected
-                              ? PlaceOrderPage.primaryOrange
-                              : const Color(0xFF9CA3AF),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            address.fullAddress,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.68),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            }),
-          ],
+                const SizedBox(height: 14),
+                ...addresses.map((address) {
+                  final selected = selectedAddress?.id == address.id;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InkWell(
+                      onTap: () => onSelected(address),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected
+                                ? PlaceOrderPage.primaryOrange
+                                : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: selected
+                                  ? PlaceOrderPage.primaryOrange
+                                  : const Color(0xFF9CA3AF),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                address.fullAddress,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: onManage,
+                  icon: const Icon(Icons.add_location_alt_outlined),
+                  label: const Text('Add or manage addresses'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

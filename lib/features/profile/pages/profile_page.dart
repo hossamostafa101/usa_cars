@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:talabatfresh/features/notifications/pages/notifications_page.dart';
+import 'package:talabatfresh/features/part_requests/pages/my_part_requests_page.dart';
+import 'package:talabatfresh/features/profile/pages/privacy_policy_page.dart';
+import 'package:talabatfresh/features/repair/pages/repairs_page.dart';
+import 'package:talabatfresh/features/roadside/pages/roadside_page.dart';
 import 'package:talabatfresh/features/vehicles/pages/cars_management_page.dart';
 import 'package:talabatfresh/providers/auth_provider.dart';
-
+import '../../marketplace/page/orders_page.dart';
 import '../../vehicles/data/models/vehicle_model.dart';
 import '../providers/profile_provider.dart';
+import 'addresses_page.dart';
+import 'change_password_page.dart';
+import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -37,6 +45,29 @@ class _ProfilePageState extends State<ProfilePage> {
           (_) => false,
     );
   }
+
+  Future<void> _openProfilePage(
+      Widget page,
+      ) async {
+    final changed =
+    await Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (_) =>
+        page,
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (changed == true) {
+      await context
+          .read<ProfileProvider>()
+          .refreshProfile();
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -75,12 +106,26 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 16),
 
                 _ProfileHeaderCard(
-                  name: provider.user?.name ?? 'User',
-                  email: provider.user?.email ?? '',
-                  phone: provider.user?.phone ?? '',
-                  isDark: isDark,
-                  textColor: textColor,
-                  subtleTextColor: subtleTextColor,
+                  name:
+                  provider.user?.name ??
+                      'User',
+                  email:
+                  provider.user?.email ??
+                      '',
+                  phone:
+                  provider.user?.phone ??
+                      '',
+                  isDark:
+                  isDark,
+                  textColor:
+                  textColor,
+                  subtleTextColor:
+                  subtleTextColor,
+                  onEdit: () {
+                    _openProfilePage(
+                      const EditProfilePage(),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 20),
@@ -126,41 +171,226 @@ class _ProfilePageState extends State<ProfilePage> {
 
                 const SizedBox(height: 24),
 
-                const _SectionTitle(
-                  title: 'Payment methods',
-                  actionText: 'Edit',
+                const SizedBox(
+                  height: 24,
                 ),
 
-                const SizedBox(height: 8),
+                const _SectionTitle(
+                  title: 'Account',
+                ),
+
+                const SizedBox(
+                  height: 8,
+                ),
 
                 _CardBox(
-                  isDark: isDark,
-                  child: const Column(
+                  isDark:
+                  isDark,
+                  child:
+                  Column(
                     children: [
                       _SettingTile(
-                        icon: Icons.credit_card_rounded,
-                        iconColor: ProfilePage.primaryOrange,
-                        title: 'Visa ending in 2148',
-                        subtitle: 'Default for parts & repairs',
-                        trailingText: 'Primary',
+                        icon:
+                        Icons.person_outline_rounded,
+                        iconColor:
+                        ProfilePage.primaryOrange,
+                        title:
+                        'Personal information',
+                        subtitle:
+                        'Name, phone and profile details',
+                        trailingIcon:
+                        Icons.chevron_right_rounded,
+                        onTap: () {
+                          _openProfilePage(
+                            const EditProfilePage(),
+                          );
+                        },
                       ),
-                      Divider(height: 1),
+
+                      const Divider(
+                        height:
+                        1,
+                      ),
+
                       _SettingTile(
-                        icon: Icons.account_balance_wallet_rounded,
-                        iconColor: Color(0xFF10B981),
-                        title: 'Apple Pay',
-                        subtitle: 'Enabled on this device',
-                        trailingIcon: Icons.chevron_right_rounded,
+                        icon:
+                        Icons.lock_outline_rounded,
+                        iconColor:
+                        const Color(
+                          0xFF6366F1,
+                        ),
+                        title:
+                        'Change password',
+                        subtitle:
+                        'Update your account password',
+                        trailingIcon:
+                        Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context)
+                              .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const ChangePasswordPage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const Divider(
+                        height:
+                        1,
+                      ),
+
+                      _SettingTile(
+                        icon:
+                        Icons.location_on_outlined,
+                        iconColor:
+                        const Color(
+                          0xFF10B981,
+                        ),
+                        title:
+                        'Saved addresses',
+                        subtitle:
+                        'Home, work and service locations',
+                        trailingIcon:
+                        Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context)
+                              .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const AddressesPage(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(
+                  height: 24,
+                ),
+
+                const _SectionTitle(
+                  title: 'Activity',
+                ),
+
+                const SizedBox(
+                  height: 8,
+                ),
+
+                _CardBox(
+                  isDark: isDark,
+                  child: Column(
+                    children: [
+                      _SettingTile(
+                        icon: Icons.shopping_bag_outlined,
+                        iconColor: const Color(0xFF6366F1),
+                        title: 'Orders',
+                        subtitle: 'Marketplace purchases and order status',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const OrdersPage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const Divider(height: 1),
+
+                      _SettingTile(
+                        icon: Icons.request_quote_outlined,
+                        iconColor: const Color(0xFF0EA5E9),
+                        title: 'Part requests',
+                        subtitle: 'Requests sent to parts sellers',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MyPartRequestsPage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const Divider(height: 1),
+
+                      _SettingTile(
+                        icon: Icons.build_outlined,
+                        iconColor: const Color(0xFF10B981),
+                        title: 'Repair services',
+                        subtitle: 'Workshops and repair requests',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RepairsPage(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const Divider(height: 1),
+
+                      _SettingTile(
+                        icon: Icons.local_shipping_outlined,
+                        iconColor: ProfilePage.primaryOrange,
+                        title: 'Roadside assistance',
+                        subtitle: 'Towing and roadside requests',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RoadsidePage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 24,
+                ),
+
+                const _SectionTitle(
+                  title: 'App',
+                ),
+
+                const SizedBox(
+                  height: 8,
+                ),
+
+                _CardBox(
+                  isDark: isDark,
+                  child: Column(
+                    children: [
+                      _SettingTile(
+                        icon: Icons.notifications_none_rounded,
+                        iconColor: ProfilePage.primaryOrange,
+                        title: 'Notifications',
+                        subtitle: 'View your recent notifications',
+                        trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
 
                 const _SectionTitle(
                   title: 'Preferences',
-                  actionText: 'Edit',
                 ),
 
                 const SizedBox(height: 8),
@@ -173,64 +403,65 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.notifications_active_rounded,
                         iconColor: const Color(0xFFF59E0B),
                         title: 'Push notifications',
-                        subtitle: 'Job status, arrivals and offers',
-                        value: true,
-                        onChanged: null,
+                        subtitle: 'Orders, repairs and roadside updates',
+                        value: provider.pushNotificationsEnabled,
+                        onChanged: provider.setPushNotificationsEnabled,
                       ),
+
                       const Divider(height: 1),
+
                       _SwitchTile(
-                        icon: Icons.email_rounded,
+                        icon: Icons.email_outlined,
                         iconColor: ProfilePage.primaryOrange,
                         title: 'Email updates',
                         subtitle: 'Receipts and account activity',
-                        value: true,
-                        onChanged: null,
+                        value: provider.emailUpdatesEnabled,
+                        onChanged: provider.setEmailUpdatesEnabled,
                       ),
+
                       const Divider(height: 1),
+
                       _SwitchTile(
-                        icon: Icons.shield_rounded,
+                        icon: Icons.location_on_outlined,
                         iconColor: const Color(0xFF10B981),
                         title: 'Share location automatically',
-                        subtitle: 'Faster roadside matching',
-                        value: true,
-                        onChanged: null,
+                        subtitle: 'Allow location sharing for active roadside help',
+                        value: provider.autoShareLocationEnabled,
+                        onChanged: provider.setAutoShareLocationEnabled,
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                const _SectionTitle(
-                  title: 'Help & legal',
+                const SizedBox(
+                  height: 24,
                 ),
 
-                const SizedBox(height: 8),
+                const _SectionTitle(
+                  title: 'Support & legal',
+                ),
+
+                const SizedBox(
+                  height: 8,
+                ),
 
                 _CardBox(
                   isDark: isDark,
-                  child: const Column(
+                  child: Column(
                     children: [
                       _SettingTile(
-                        icon: Icons.help_center_rounded,
-                        iconColor: ProfilePage.primaryOrange,
-                        title: 'Help center',
-                        subtitle: 'FAQs and support',
-                        trailingIcon: Icons.chevron_right_rounded,
-                      ),
-                      Divider(height: 1),
-                      _SettingTile(
-                        icon: Icons.article_rounded,
-                        iconColor: Color(0xFF6366F1),
-                        title: 'Terms of service',
-                        trailingIcon: Icons.chevron_right_rounded,
-                      ),
-                      Divider(height: 1),
-                      _SettingTile(
-                        icon: Icons.privacy_tip_rounded,
-                        iconColor: Color(0xFF10B981),
+                        icon: Icons.privacy_tip_outlined,
+                        iconColor: const Color(0xFF10B981),
                         title: 'Privacy policy',
+                        subtitle: 'Privacy, location and data use',
                         trailingIcon: Icons.chevron_right_rounded,
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const PrivacyPolicyPage(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -340,6 +571,8 @@ class _ProfileHeaderCard extends StatelessWidget {
   final Color textColor;
   final Color subtleTextColor;
 
+  final VoidCallback onEdit;
+
   const _ProfileHeaderCard({
     required this.name,
     required this.email,
@@ -347,6 +580,8 @@ class _ProfileHeaderCard extends StatelessWidget {
     required this.isDark,
     required this.textColor,
     required this.subtleTextColor,
+
+    required this.onEdit,
   });
 
   String get initials {
@@ -441,28 +676,66 @@ class _ProfileHeaderCard extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: Colors.white.withOpacity(0.95),
+          Material(
+            color:
+            Colors.white
+                .withOpacity(
+              .95,
             ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.edit_rounded,
-                  size: 14,
-                  color: ProfilePage.primaryOrange,
+            borderRadius:
+            BorderRadius.circular(
+              999,
+            ),
+            child:
+            InkWell(
+              onTap:
+              onEdit,
+              borderRadius:
+              BorderRadius.circular(
+                999,
+              ),
+              child:
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(
+                  horizontal:
+                  10,
+                  vertical:
+                  7,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'Edit',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: ProfilePage.primaryOrange,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child:
+                Row(
+                  children: [
+                    const Icon(
+                      Icons
+                          .edit_rounded,
+                      size:
+                      14,
+                      color:
+                      ProfilePage
+                          .primaryOrange,
+                    ),
+                    const SizedBox(
+                      width:
+                      4,
+                    ),
+                    Text(
+                      'Edit',
+                      style:
+                      theme
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(
+                        color:
+                        ProfilePage
+                            .primaryOrange,
+                        fontWeight:
+                        FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -640,6 +913,7 @@ class _SettingTile extends StatelessWidget {
   final String? subtitle;
   final String? trailingText;
   final IconData? trailingIcon;
+  final VoidCallback? onTap;
 
   const _SettingTile({
     required this.icon,
@@ -648,6 +922,7 @@ class _SettingTile extends StatelessWidget {
     this.subtitle,
     this.trailingText,
     this.trailingIcon,
+    this.onTap,
   });
 
   @override
@@ -713,7 +988,7 @@ class _SettingTile extends StatelessWidget {
             : const Color(0xFF9CA3AF),
       )
           : null,
-      onTap: () {},
+      onTap: onTap,
     );
   }
 }
@@ -778,7 +1053,11 @@ class _SwitchTile extends StatelessWidget {
         activeColor: Colors.white,
         activeTrackColor: ProfilePage.primaryOrange,
       ),
-      onTap: () {},
+      onTap: onChanged == null
+          ? null
+          : () {
+        onChanged!(!value);
+      },
     );
   }
 }
