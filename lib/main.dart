@@ -112,7 +112,7 @@ class _AppState extends State<App> {
         defaultTransition: Transition.rightToLeft,
         transitionDuration: const Duration(milliseconds: 500),
         debugShowCheckedModeBanner: false,
-        title: 'usa cars',
+        title: 'Qotomoto',
         home: const AppEntryPage(),
         theme: lightModeTheme,
       ),
