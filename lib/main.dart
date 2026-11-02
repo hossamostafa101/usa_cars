@@ -1,15 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_paymob/flutter_paymob.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:talabatfresh/app_entry_page.dart';
 import 'package:talabatfresh/data/themes_data.dart';
 import 'package:talabatfresh/features/home/providers/customer_home_provider.dart';
-import 'package:talabatfresh/features/home/providers/home_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/cart_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/marketplace_provider.dart';
 import 'package:talabatfresh/features/marketplace/providers/place_order_provider.dart';
@@ -18,8 +17,6 @@ import 'package:talabatfresh/features/profile/providers/profile_provider.dart';
 import 'package:talabatfresh/features/repair/providers/repair_provider.dart';
 import 'package:talabatfresh/features/roadside/providers/roadside_provider.dart';
 import 'package:talabatfresh/features/vehicles/providers/vehicle_provider.dart';
-import 'package:talabatfresh/pages/home_page.dart';
-import 'package:talabatfresh/pages/splash_page.dart';
 import 'package:talabatfresh/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -29,68 +26,77 @@ import 'data/local/AppDatabaseHelper.dart';
 import 'data/local/cache_helper.dart';
 import 'data/local/dbTablesHelpers/NotificationDb.dart';
 import 'data/local/dbTablesHelpers/dbModels/db_models.dart';
+import 'startup_gate.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
+    FlutterLocalNotificationsPlugin();
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(StartupGate(initialize: initializeApp, builder: (_) => const App()));
+}
+
+Future<void> initializeApp() async {
   await CacheHelper.init();
-  if (kIsWeb) {
-    // 🔹 مؤقتًا على الويب: ما تعملش DB ولا Messaging
-    // لو Firebase لسه مش متظبّط للويب، خليه متعطّل خالص
-    // ولو ظبطناه بعدين هنغير السطر ده ونضيف options
-    // مثال بعد ما نجهّز firebase_options.dart:
-    // await Firebase.initializeApp(
-    //   options: DefaultFirebaseOptions.currentPlatform,
-    // );
-
-    runApp(const App());
-    return;
-  }
-  await Firebase.initializeApp();
-  final dbHelper = AppDatabaseHelper();
-  await dbHelper.database;
+  if (kIsWeb) return;
+  if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+  await AppDatabaseHelper().database;
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await FirebaseMessaging.instance.subscribeToTopic('koshy');
-  const AndroidInitializationSettings androidSettings =
-  AndroidInitializationSettings('@drawable/wheely_icon_notify_trans');
-  const InitializationSettings initSettings =
-  InitializationSettings(android: androidSettings);
-
-  runApp(const App());
 }
 
 class App extends StatefulWidget {
-  const App({Key? key}) : super(key: key);
+  const App({super.key});
   @override
-  _AppState createState() => _AppState();
+  State<App> createState() => _AppState();
 }
 
 class _AppState extends State<App> {
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+  StreamSubscription<String>? _tokenSubscription;
+
   @override
   void initState() {
     super.initState();
     if (!kIsWeb) {
-      requestNotificationPermission();
-
-      FirebaseMessaging.onMessage.listen((message) {
-        if (message.data.isNotEmpty) {
-          _showNotification(message);
+      _messageSubscription = FirebaseMessaging.onMessage.listen((
+        message,
+      ) async {
+        try {
+          if (message.data.isNotEmpty) await _showNotification(message);
+        } catch (error) {
+          debugPrint('Unable to display notification: $error');
         }
       });
+      _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
+        (_) {
+          unawaited(_subscribeToNotifications());
+        },
+        onError: (Object error) {
+          debugPrint('Unable to refresh notification token: $error');
+        },
+      );
+      unawaited(_configureNotifications());
+    }
+  }
 
-      FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        // Optional: Handle navigation
-      });
+  Future<void> _configureNotifications() async {
+    try {
+      await _initializeLocalNotifications();
+      await FirebaseMessaging.instance.requestPermission();
+      await _subscribeToNotifications();
+    } catch (error) {
+      // Notification failures must not prevent the app from opening.
+      debugPrint('Unable to configure notifications: $error');
     }
   }
-  Future<void> requestNotificationPermission() async {
-    if (await Permission.notification.isDenied ||
-        await Permission.notification.isPermanentlyDenied) {
-      await Permission.notification.request();
-    }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    _tokenSubscription?.cancel();
+    super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -104,9 +110,7 @@ class _AppState extends State<App> {
         ChangeNotifierProvider(create: (_) => RoadsideProvider()),
         ChangeNotifierProvider(create: (_) => RepairProvider()),
         ChangeNotifierProvider(create: (_) => PlaceOrderProvider()),
-        ChangeNotifierProvider(
-          create: (_) => PartRequestProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => PartRequestProvider()),
       ],
       child: GetMaterialApp(
         defaultTransition: Transition.rightToLeft,
@@ -120,11 +124,38 @@ class _AppState extends State<App> {
   }
 }
 
-
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("XXXXX Background message: ${message.messageId}");
-  _showNotification(message);
+  await _initializeLocalNotifications();
+  await _showNotification(message);
+}
+
+Future<void> _initializeLocalNotifications() async {
+  const settings = InitializationSettings(
+    android: AndroidInitializationSettings(
+      '@drawable/wheely_icon_notify_trans',
+    ),
+    iOS: DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    ),
+  );
+  await flutterLocalNotificationsPlugin.initialize(settings);
+}
+
+Future<void> _subscribeToNotifications() async {
+  try {
+    final messaging = FirebaseMessaging.instance;
+    if ((Platform.isIOS || Platform.isMacOS) &&
+        await messaging.getAPNSToken() == null) {
+      return;
+    }
+    await messaging.subscribeToTopic('koshy');
+  } catch (error) {
+    debugPrint('Unable to subscribe to notifications: $error');
+  }
 }
 
 Future<void> requestNotificationPermission() async {
@@ -139,11 +170,11 @@ Future<void> requestNotificationPermission() async {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted notification permission');
+      debugPrint('User granted notification permission');
     } else if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      print('User denied notification permission');
+      debugPrint('User denied notification permission');
     } else {
-      print('Notification permission not determined or restricted');
+      debugPrint('Notification permission not determined or restricted');
     }
   }
 }
@@ -153,9 +184,9 @@ Future<void> requestNotificationPermissionManual() async {
   if (!status.isGranted) {
     status = await Permission.notification.request();
     if (status.isGranted) {
-      print('Notification permission granted');
+      debugPrint('Notification permission granted');
     } else {
-      print('Notification permission denied');
+      debugPrint('Notification permission denied');
     }
   }
 }
@@ -169,8 +200,8 @@ Future<void> _showNotification(RemoteMessage message) async {
   await notificationDb.insertItem(
     NotificationItem(
       // id: product.id,
-      title: data['head'],
-      description: data['desc'],
+      title: title,
+      description: body,
       action: '',
       topic: '',
     ),
@@ -184,8 +215,10 @@ Future<void> _showNotification(RemoteMessage message) async {
     priority: Priority.high,
   );
 
-  const NotificationDetails notificationDetails =
-  NotificationDetails(android: androidDetails);
+  const NotificationDetails notificationDetails = NotificationDetails(
+    android: androidDetails,
+    iOS: DarwinNotificationDetails(),
+  );
 
   await flutterLocalNotificationsPlugin.show(
     message.hashCode,

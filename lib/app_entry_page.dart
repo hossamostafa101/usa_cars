@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:talabatfresh/features/home/pages/customer_home_page.dart';
 import 'package:talabatfresh/features/vendor/pages/vendor_home_page.dart';
 import 'package:talabatfresh/features/vendor/pages/vendor_pending_page.dart';
 import 'package:talabatfresh/features/auth/pages/login_page.dart';
@@ -23,7 +22,7 @@ class _AppEntryPageState extends State<AppEntryPage> {
     super.initState();
 
     Future.microtask(() {
-      context.read<AuthProvider>().initAuth();
+      if (mounted) context.read<AuthProvider>().initAuth();
     });
   }
 
@@ -49,9 +48,7 @@ class _AppEntryPageState extends State<AppEntryPage> {
 
         // vendor rejected
         if (auth.authStatus == AuthStatus.vendorRejected) {
-          return const VendorPendingPage(
-            isRejected: true,
-          );
+          return const VendorPendingPage(isRejected: true);
         }
 
         // authenticated
@@ -75,10 +72,6 @@ class _LoadingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
